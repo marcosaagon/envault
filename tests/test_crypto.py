@@ -52,3 +52,12 @@ def test_unicode_plaintext_round_trip():
     blob = encrypt(unicode_text, PASSWORD)
     recovered = decrypt(blob, PASSWORD)
     assert recovered == unicode_text
+
+
+def test_decrypt_truncated_blob_raises():
+    """A blob that is too short to contain salt + nonce + tag should raise."""
+    blob = encrypt(PLAINTEXT, PASSWORD)
+    # Slice off enough bytes to make the blob structurally invalid
+    truncated = blob[:8]
+    with pytest.raises(Exception):
+        decrypt(truncated, PASSWORD)
