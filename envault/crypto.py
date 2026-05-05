@@ -5,10 +5,12 @@ import base64
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives.kdf.scrypt import Scrypt
 from cryptography.hazmat.backends import default_backend
+from cryptography.exceptions import InvalidTag
 
 SALT_SIZE = 16
 NONCE_SIZE = 12
 KEY_SIZE = 32  # 256-bit AES key
+MIN_BLOB_SIZE = SALT_SIZE + NONCE_SIZE + 16  # 16 bytes is the GCM auth tag minimum
 
 
 def derive_key(password: str, salt: bytes) -> bytes:
@@ -36,12 +38,30 @@ def encrypt(plaintext: str, password: str) -> str:
 
 
 def decrypt(encoded_blob: str, password: str) -> str:
-    """Decrypt a base64-encoded blob with a password. Returns plaintext string."""
-    blob = base64.b64decode(encoded_blob.encode("utf-8"))
+    """Decrypt a base64-encoded blob with a password. Returns plaintext string.
+
+    Raises:
+        ValueError: If the blob is malformed or too short to be valid.
+        ValueError: If decryption fails due to an incorrect password or corrupted data.
+    """
+    try:
+        blob = base64.b64decode(encoded_blob.encode("utf-8"))
+    except Exception as exc:
+        raise ValueError("Invalid base64-encoded blob.") from exc
+
+    if len(blob) < MIN_BLOB_SIZE:
+        raise ValueError(
+            f"Blob is too short to be valid (got {len(blob)} bytes, "
+            f"expected at least {MIN_BLOB_SIZE})."
+        )
+
     salt = blob[:SALT_SIZE]
     nonce = blob[SALT_SIZE:SALT_SIZE + NONCE_SIZE]
     ciphertext = blob[SALT_SIZE + NONCE_SIZE:]
     key = derive_key(password, salt)
     aesgcm = AESGCM(key)
-    plaintext_bytes = aesgcm.decrypt(nonce, ciphertext, None)
+    try:
+        plaintext_bytes = aesgcm.decrypt(nonce, ciphertext, None)
+    except InvalidTag as exc:
+        raise ValueError("Decryption failed: incorrect password or corrupted data.") from exc
     return plaintext_bytes.decode("utf-8")
