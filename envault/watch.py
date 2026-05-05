@@ -56,6 +56,14 @@ class EnvWatcher:
                     pass
             self._stop_event.wait(self.poll_interval)
 
+    def reset(self) -> None:
+        """Re-baseline the watched file's hash to its current contents.
+
+        Useful after an intentional programmatic write to the file, so the
+        next poll does not treat the write as an external change.
+        """
+        self._last_hash = _file_hash(self.env_path)
+
     @property
     def is_running(self) -> bool:
         return self._thread is not None and self._thread.is_alive()
