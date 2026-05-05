@@ -77,3 +77,22 @@ def lint_vault_file(path: Path, password: str) -> LintResult:
     blob = path.read_text(encoding="utf-8").strip()
     plaintext = decrypt(blob, password)
     return lint_env_text(plaintext)
+
+
+def lint_auto(path: Path, password: str | None = None) -> LintResult:
+    """Lint a .env or vault file, choosing the right strategy automatically.
+
+    If *path* ends with ``VAULT_SUFFIX`` a *password* must be supplied so the
+    file can be decrypted before linting.  Plain ``.env`` files are linted
+    directly without a password.
+
+    Raises:
+        ValueError: If a vault file is given but no password is provided.
+    """
+    if path.suffix == VAULT_SUFFIX or path.name.endswith(VAULT_SUFFIX):
+        if password is None:
+            raise ValueError(
+                f"A password is required to lint the vault file '{path}'."
+            )
+        return lint_vault_file(path, password)
+    return lint_env_file(path)
