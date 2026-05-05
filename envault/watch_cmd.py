@@ -29,10 +29,16 @@ def watch_start_cmd(env_file: str, vault_file: str, password: str, interval: flo
     if not env_path.exists():
         raise click.ClickException(f"File not found: {env_file}")
 
+    if interval <= 0:
+        raise click.ClickException("Poll interval must be a positive number.")
+
     def _on_change(path: Path) -> None:
-        lock(path, vault_path, password)
-        record_event("watch_lock", {"env": str(path), "vault": str(vault_path)})
-        click.echo(f"[watch] Locked {path} -> {vault_path}")
+        try:
+            lock(path, vault_path, password)
+            record_event("watch_lock", {"env": str(path), "vault": str(vault_path)})
+            click.echo(f"[watch] Locked {path} -> {vault_path}")
+        except Exception as exc:  # noqa: BLE001
+            click.echo(f"[watch] ERROR locking {path}: {exc}", err=True)
 
     watcher = EnvWatcher(env_path, _on_change, poll_interval=interval)
     watcher.start()
