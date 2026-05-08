@@ -92,6 +92,9 @@ def _parse_toml(text: str) -> Dict[str, str]:
         if "=" not in stripped:
             continue
         key, _, rest = stripped.partition("=")
-        value = rest.strip().strip('"')
+        value = rest.strip()
+        # Strip surrounding double quotes and unescape internal quotes
+        if value.startswith('"') and value.endswith('"'):
+            value = value[1:-1].replace('\\"', '"')
         result[key.strip()] = value
     return result
