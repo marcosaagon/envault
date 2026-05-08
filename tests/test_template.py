@@ -74,6 +74,13 @@ def test_template_from_env_file_writes_output(tmp_path: Path):
     assert "<CHANGE_ME>" in out_file.read_text(encoding="utf-8")
 
 
+def test_template_from_env_file_missing_file(tmp_path: Path):
+    """template_from_env_file should raise FileNotFoundError for missing input."""
+    missing = tmp_path / "nonexistent.env"
+    with pytest.raises(FileNotFoundError):
+        template_from_env_file(missing)
+
+
 def test_template_from_vault(tmp_path: Path):
     vault_file = tmp_path / ".env.vault"
     password = "vaultpass"
