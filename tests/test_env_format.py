@@ -104,14 +104,20 @@ def test_format_env_file_writes_back(tmp_path):
 
 
 def test_format_env_file_no_write_when_unchanged(tmp_path):
+    """Ensure format_env_file does not rewrite the file when nothing changed."""
     env_file = tmp_path / ".env"
-    original = "KEY=value\n"
-    env_file.write_text(original)
+    original_content = "KEY=value\n"
+    env_file.write_text(original_content)
+    mtime_before = env_file.stat().st_mtime
+
     result = format_env_file(str(env_file))
+
     assert not result.changed
-    assert env_file.read_text() == original
+    assert env_file.stat().st_mtime == mtime_before
 
 
 def test_format_env_file_missing_raises(tmp_path):
+    """Ensure format_env_file raises FileNotFoundError for missing files."""
+    missing = tmp_path / "nonexistent.env"
     with pytest.raises(FileNotFoundError):
-        format_env_file(str(tmp_path / "nonexistent.env"))
+        format_env_file(str(missing))
